@@ -1,0 +1,58 @@
+name: Terraform S3 Vault CI 
+
+on:
+  push:
+    branches:
+      - main
+
+  pull_request:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  terrform-check:
+    name: Terraform Validation
+    runs-on: ubuntu-latest
+
+    default:
+      run:
+        working-directory: terraform
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.0
+
+      - name: Terraform Init
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Initialization
+        run: terraform init -backend=false
+
+      - name: Terraform Validation
+        run: terraform validate
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Checkov
+        run: pip install checkov
+
+      - name: Security Scan
+        working-directory:
+        run: |
+          checkov -d terraform \
+            --framework terraform \
+            --skip-check CKV_AWS_18 \
+            --compact
